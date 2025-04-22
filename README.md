@@ -1,82 +1,59 @@
-# Enhanced SmolVLM with TokenLearner-QFormer Connector
+# Modified SmolVLM with TokenLearner and QFormer
 
-This project modifies the SmolVLM-256M-Instruct model by replacing its default connector with a custom connector that combines TokenLearner and LLaMA-style QFormer architectures for better visual-language performance. The model is then fine-tuned on the TextVQA dataset.
+This project replaces the connector module in the SmolVLM model with a custom connector using TokenLearner and QFormer to improve performance on visual question answering tasks.
 
-## Architecture Modification
+## Project Structure
 
-Original connector in SmolVLM-256M-Instruct:
-```
-(connector): Idefics3Connector(
-  (modality_projection): Idefics3SimpleMLP(
-    (proj): Linear(in_features=12288, out_features=576, bias=False)
-  )
-)
-```
+- `main.py`: Script to load the original SmolVLM model, replace its connector, and save the modified model
+- `custom_connector.py`: Implementation of the custom TokenLearner and QFormer connector modules
+- `finetune.py`: Script to fine-tune the modified model on the TextVQA dataset
+- `requirements.txt`: List of required packages
 
-Our custom replacement:
-```
-(connector): MyTokenLearnerQFormerConnector(
-  (token_learner): TokenLearner(...)
-  (q_former): LlamaStyleQFormer(...)
-)
-```
+## How It Works
 
-### Components
+1. **TokenLearner**: Learns to select the most important visual tokens from the visual encoder's output
+2. **QFormer**: Uses cross-attention to transform these tokens into a format suitable for the language model
 
-1. **TokenLearner**: Dynamically extracts tokens from visual features by learning important spatial regions.
-   - Based on the paper "[TokenLearner: Adaptive Space-Time Tokenization for Videos](https://arxiv.org/abs/2106.11297)"
+This combination provides a more advanced way to connect the vision and language models compared to the original connector which used a simple MLP projection.
 
-2. **LlamaStyleQFormer**: Query-based transformer that processes learned tokens with cross-attention using LLaMA-style architecture.
-   - Uses custom LLaMA-style attention and MLP layers
-   - Maintains compatibility with the LLaMA architecture in the text model
-   - Uses RMSNorm for normalization, matching LLaMA's approach
+## Installation
 
-## Design Choice
-
-We specifically designed the QFormer component to use LLaMA-style attention instead of BERT-style attention to:
-1. Maintain architectural consistency with the text model (which is a LLaMA model)
-2. Avoid compatibility issues with cross-attention implementation
-3. Potentially improve performance by using the same attention mechanism throughout the model
-
-## Setup
-
-1. Install the required dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-## Running the Code
+## Usage
 
-1. Run the main script:
+### 1. Replace the connector and save the modified model
+
 ```bash
 python main.py
 ```
 
 This will:
-- Load the SmolVLM-256M-Instruct model
-- Replace the connector with our custom TokenLearner-LLaMA QFormer connector
-- Fine-tune the model on a subset of the TextVQA dataset
-- Save the fine-tuned model to the "modified_model" directory
-- Run an example inference on a validation example
+- Load the SmolVLM model
+- Replace the connector with our custom TokenLearner+QFormer connector
+- Save the modified model
 
-## Fine-tuning Details
+### 2. Fine-tune the modified model on TextVQA
 
-The fine-tuning process:
-- Freezes the vision model to preserve its representations
-- Only trains the connector and text model components
-- Uses AdamW optimizer with a learning rate of 1e-5
-- Uses a linear learning rate scheduler with warmup
-- Trains for 3 epochs on a subset of the TextVQA dataset
+```bash
+python finetune.py
+```
 
-## Expected Benefits
+This will:
+- Load the modified model
+- Fine-tune it on the TextVQA dataset
+- Save the fine-tuned model
+- Run an example inference
 
-The combination of TokenLearner and LLaMA-style QFormer should provide several advantages:
+## Customization
 
-1. **Dynamic token selection**: TokenLearner adaptively focuses on the most relevant parts of the image
-2. **Better vision-language alignment**: QFormer's cross-attention mechanism helps bridge visual tokens to language representations
-3. **Improved text grounding**: Better handling of text within images, which is crucial for TextVQA
-4. **Architectural consistency**: Using LLaMA-style attention throughout provides better gradient flow and compatibility
+You can modify various parameters in both scripts:
+- Number of tokens in TokenLearner (`token_learner_tokens`)
+- Number of query tokens in QFormer (`qformer_query_tokens`)
+- Training parameters in `finetune.py`
 
-## Dataset
+## Requirements
 
-The model is fine-tuned on the [TextVQA dataset](https://textvqa.org/) from Hugging Face, which contains questions about text in images. 
+See `requirements.txt` for the list of required packages. 
